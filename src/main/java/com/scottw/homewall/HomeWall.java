@@ -3,7 +3,6 @@ package com.scottw.homewall;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.auth.Credentials;
 import com.google.cloud.datastore.*;
 import com.google.cloud.functions.HttpFunction;
 import com.google.cloud.functions.HttpRequest;
@@ -13,12 +12,11 @@ import com.scottw.homewall.core.problem.ProblemRequest;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class HomeWall implements HttpFunction {
+  private static final TypeReference<List<List<Map<String, Integer>>>> HOLDS = new TypeReference<>() {};
+  private static final TypeReference<List<Map<String, Integer>>> HOLD = new TypeReference<>() {};
 
   static {
     System.setProperty("GOOGLE_CLOUD_PROJECT", "homewall-301021");
@@ -36,7 +34,8 @@ public class HomeWall implements HttpFunction {
     response.appendHeader("Access-Control-Allow-Origin", "*");
     response.appendHeader("Content-Type", "application/json");
 
-    switch (request.getMethod()) {
+    String method = request.getMethod();
+    switch (method) {
       case "OPTIONS":
         handleOptions(request, response);
         break;
@@ -74,6 +73,7 @@ public class HomeWall implements HttpFunction {
         break;
       default:
         response.setStatusCode(404);
+        break;
     }
   }
 
@@ -110,7 +110,44 @@ public class HomeWall implements HttpFunction {
   }
 
   private void handlePut(HttpRequest request, HttpResponse response)
-    throws IOException {}
+    throws IOException {
+    switch (request.getPath()) {
+      case "/holds":
+        response
+          .getWriter()
+          .write(
+            objectMapper.writeValueAsString(
+              upsertHolds(
+                objectMapper.readValue(request.getInputStream(), HOLDS)
+              )
+            )
+          );
+        break;
+      default:
+        response.setStatusCode(404);
+        break;
+    }
+  }
+
+  private List<List<Map<String, Integer>>> upsertHolds(
+    List<List<Map<String, Integer>>> holds
+  )
+    throws JsonProcessingException {
+    Key taskKey = datastore.newKeyFactory().setKind("Holds").newKey("default");
+
+    Entity.Builder builder = Entity.newBuilder(taskKey);
+
+    for (int i = 0; i < holds.size(); i++) {
+      builder.set(
+        "hold" + i,
+        Blob.copyFrom(objectMapper.writeValueAsBytes(holds.get(i)))
+      );
+    }
+
+    datastore.put(builder.build());
+
+    return holds;
+  }
 
   private void handleGet(HttpRequest request, HttpResponse response)
     throws IOException {
@@ -120,9 +157,34 @@ public class HomeWall implements HttpFunction {
           .getWriter()
           .write(objectMapper.writeValueAsString(getProblems()));
         break;
+      case "/holds":
+        response.getWriter().write(objectMapper.writeValueAsString(getHolds()));
+        break;
       default:
         response.setStatusCode(404);
     }
+  }
+
+  private List<List<Map<String, Integer>>> getHolds() throws IOException {
+    Entity entity = datastore.get(
+      datastore.newKeyFactory().setKind("Holds").newKey("default")
+    );
+
+    if (entity == null) {
+      return Collections.emptyList();
+    }
+
+    List<List<Map<String, Integer>>> holds = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      Blob blob = entity.getBlob("holds");
+
+      if (blob == null) {
+        break;
+      }
+
+      holds.add(objectMapper.readValue(blob.asInputStream(), HOLD));
+    }
+    return holds;
   }
 
   private List<Problem> getProblems() throws IOException {
@@ -149,7 +211,7 @@ public class HomeWall implements HttpFunction {
           .setHolds(
             objectMapper.readValue(
               entity.getBlob("holds").asInputStream(),
-              new TypeReference<List<List<Map<String, Integer>>>>() {}
+              HOLDS
             )
           )
           .build()
@@ -159,7 +221,10 @@ public class HomeWall implements HttpFunction {
   }
 
   private void handleOptions(HttpRequest request, HttpResponse response) {
-    response.appendHeader("Access-Control-Allow-Methods", "GET");
+    response.appendHeader(
+      "Access-Control-Allow-Methods",
+      "POST, PUT, GET, OPTIONS, DELETE"
+    );
     response.appendHeader("Access-Control-Allow-Headers", "Content-Type");
     response.appendHeader("Access-Control-Max-Age", "3600");
     response.setStatusCode(HttpURLConnection.HTTP_NO_CONTENT);
