@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class HomeWall implements HttpFunction {
   private static final TypeReference<List<List<Map<String, Integer>>>> HOLDS = new TypeReference<>() {};
@@ -174,17 +175,23 @@ public class HomeWall implements HttpFunction {
       return Collections.emptyList();
     }
 
-    List<List<Map<String, Integer>>> holds = new ArrayList<>();
-    for (int i = 0; i < 1000; i++) {
-      Blob blob = entity.getBlob("holds");
-
-      if (blob == null) {
-        break;
-      }
-
-      holds.add(objectMapper.readValue(blob.asInputStream(), HOLD));
-    }
-    return holds;
+    return entity
+      .getNames()
+      .stream()
+      .map(
+        name -> {
+          try {
+            List<Map<String, Integer>> hold = objectMapper.readValue(
+              entity.getBlob(name).asInputStream(),
+              HOLD
+            );
+            return hold;
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        }
+      )
+      .collect(Collectors.toList());
   }
 
   private List<Problem> getProblems() throws IOException {

@@ -1,7 +1,6 @@
 package com.scottw.homewall.core.problem;
 
 import com.scottw.homewall.core.OurStyle;
-
 import java.util.UUID;
 import org.immutables.value.Value;
 
