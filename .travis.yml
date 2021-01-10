@@ -20,4 +20,6 @@ install:
         --runtime=java11 \
         --trigger-http \
         --source=target/deployment \
-        --project homewall-301021
+        --project homewall-301021 \
+        --allow-unauthenticated \
+        --region=europe-west3
