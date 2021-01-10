@@ -23,7 +23,8 @@ install:
 
 deploy:
   provider: script
-  script: >
+  skip_cleanup: true
+  script: >-
     gcloud functions deploy HomeWall \
         --entry-point=com.scottw.homewall.HomeWall \
         --runtime=java11 \
