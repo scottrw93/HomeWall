@@ -8,7 +8,7 @@ before_install:
 install:
   - mvn clean package
   - >
-    gcloud functions deploy HomeWall \
+    gcloud beta functions deploy HomeWall \
         --entry-point=com.scottw.homewall.HomeWall \
         --runtime=java11 \
         --trigger-http \
