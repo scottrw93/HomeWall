@@ -10,6 +10,8 @@ before_install:
       -in deploy/homewall-301021-5c8b8fc4efd0.json.enc \
       -out deploy/homewall-301021-5c8b8fc4efd0.json \
       -d
+  - sudo apt-get update
+  - sudo apt-get install -y google-cloud-sdk
   - gcloud auth activate-service-account --key-file deploy/homewall-301021-5c8b8fc4efd0.json
 
 install:
