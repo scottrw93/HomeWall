@@ -201,6 +201,7 @@ public class HomeWall implements HttpFunction {
         .setLimit(100)
         .setOffset(0)
         .setKind("Problem")
+        .addOrderBy(StructuredQuery.OrderBy.desc("createdAt"))
         .build()
     );
 
