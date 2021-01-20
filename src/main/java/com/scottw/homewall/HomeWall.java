@@ -1,5 +1,7 @@
 package com.scottw.homewall;
 
+import static com.scottw.homewall.dao.TypeRefs.HOLDS;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,6 +11,8 @@ import com.google.cloud.functions.HttpRequest;
 import com.google.cloud.functions.HttpResponse;
 import com.scottw.homewall.core.problem.Problem;
 import com.scottw.homewall.core.problem.ProblemRequest;
+import com.scottw.homewall.dao.HoldsDao;
+import com.scottw.homewall.dao.ProblemsDao;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.time.Instant;
@@ -16,18 +20,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class HomeWall implements HttpFunction {
-  private static final TypeReference<List<List<Map<String, Integer>>>> HOLDS = new TypeReference<>() {};
-  private static final TypeReference<List<Map<String, Integer>>> HOLD = new TypeReference<>() {};
-
-  static {
-    System.setProperty("GOOGLE_CLOUD_PROJECT", "homewall-301021");
-  }
-
   private final ObjectMapper objectMapper = new ObjectMapper();
-  private final Datastore datastore = DatastoreOptions
-    .newBuilder()
-    .build()
-    .getService();
+  private final ProblemsDao problemsDao;
+  private final HoldsDao holdsDao;
+
+  public HomeWall() {
+    this.problemsDao = new ProblemsDao();
+    this.holdsDao = new HoldsDao();
+  }
 
   @Override
   public void service(HttpRequest request, HttpResponse response)
@@ -49,10 +49,26 @@ public class HomeWall implements HttpFunction {
       case "POST":
         handlePost(request, response);
         break;
+      case "DELETE":
+        handleDelete(request, response);
+        break;
       default:
         response.setStatusCode(405);
         break;
     }
+  }
+
+  private void handleDelete(HttpRequest request, HttpResponse response) {
+    String path = request.getPath();
+    if (path.startsWith("/problems/")) {
+      if (path.split("/").length == 2) {
+        String uuid = path.split("/")[1].trim();
+        problemsDao.deleteProblem(UUID.fromString(uuid));
+        response.setStatusCode(204);
+        return;
+      }
+    }
+    response.setStatusCode(404);
   }
 
   private void handlePost(HttpRequest request, HttpResponse response)
@@ -78,38 +94,6 @@ public class HomeWall implements HttpFunction {
     }
   }
 
-  private Problem createProblem(ProblemRequest problemRequest)
-    throws JsonProcessingException {
-    Problem problem = Problem
-      .builder()
-      .from(problemRequest)
-      .setCreatedAt(Instant.now().toEpochMilli())
-      .setUuid(UUID.randomUUID())
-      .build();
-
-    Key taskKey = datastore
-      .newKeyFactory()
-      .setKind("Problem")
-      .newKey(problem.getUuid().toString());
-
-    datastore.put(
-      Entity
-        .newBuilder(taskKey)
-        .set("uuid", problem.getUuid().toString())
-        .set("name", problem.getName())
-        .set(
-          "holds",
-          Blob.copyFrom(objectMapper.writeValueAsBytes(problem.getHolds()))
-        )
-        .set("author", problem.getAuthor())
-        .set("grade", problem.getGrade())
-        .set("createdAt", problem.getCreatedAt())
-        .build()
-    );
-
-    return problem;
-  }
-
   private void handlePut(HttpRequest request, HttpResponse response)
     throws IOException {
     switch (request.getPath()) {
@@ -130,22 +114,30 @@ public class HomeWall implements HttpFunction {
     }
   }
 
+  private Problem createProblem(ProblemRequest problemRequest) {
+    Problem problem = Problem
+      .builder()
+      .from(problemRequest)
+      .setCreatedAt(Instant.now().toEpochMilli())
+      .setUuid(UUID.randomUUID())
+      .build();
+
+    problemsDao.createProblem(
+      Problem
+        .builder()
+        .from(problemRequest)
+        .setCreatedAt(Instant.now().toEpochMilli())
+        .setUuid(UUID.randomUUID())
+        .build()
+    );
+
+    return problem;
+  }
+
   private List<List<Map<String, Integer>>> upsertHolds(
     List<List<Map<String, Integer>>> holds
-  )
-    throws JsonProcessingException {
-    Key taskKey = datastore.newKeyFactory().setKind("Holds").newKey("default");
-
-    Entity.Builder builder = Entity.newBuilder(taskKey);
-
-    for (int i = 0; i < holds.size(); i++) {
-      builder.set(
-        "hold" + i,
-        Blob.copyFrom(objectMapper.writeValueAsBytes(holds.get(i)))
-      );
-    }
-
-    datastore.put(builder.build());
+  ) {
+    holdsDao.upsertHolds(holds);
 
     return holds;
   }
@@ -167,65 +159,11 @@ public class HomeWall implements HttpFunction {
   }
 
   private List<List<Map<String, Integer>>> getHolds() throws IOException {
-    Entity entity = datastore.get(
-      datastore.newKeyFactory().setKind("Holds").newKey("default")
-    );
-
-    if (entity == null) {
-      return Collections.emptyList();
-    }
-
-    return entity
-      .getNames()
-      .stream()
-      .map(
-        name -> {
-          try {
-            List<Map<String, Integer>> hold = objectMapper.readValue(
-              entity.getBlob(name).asInputStream(),
-              HOLD
-            );
-            return hold;
-          } catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        }
-      )
-      .collect(Collectors.toList());
+    return holdsDao.getHolds();
   }
 
   private List<Problem> getProblems() throws IOException {
-    QueryResults<Entity> results = datastore.run(
-      Query
-        .newEntityQueryBuilder()
-        .setLimit(100)
-        .setOffset(0)
-        .setKind("Problem")
-        .addOrderBy(StructuredQuery.OrderBy.desc("createdAt"))
-        .build()
-    );
-
-    ArrayList<Problem> problems = new ArrayList<>();
-    while (results.hasNext()) {
-      Entity entity = results.next();
-      problems.add(
-        Problem
-          .builder()
-          .setUuid(UUID.fromString(entity.getString("uuid")))
-          .setName(entity.getString("name"))
-          .setAuthor(entity.getString("author"))
-          .setGrade(entity.getString("grade"))
-          .setCreatedAt(entity.getLong("createdAt"))
-          .setHolds(
-            objectMapper.readValue(
-              entity.getBlob("holds").asInputStream(),
-              HOLDS
-            )
-          )
-          .build()
-      );
-    }
-    return problems;
+    return problemsDao.getProblems();
   }
 
   private void handleOptions(HttpRequest request, HttpResponse response) {
