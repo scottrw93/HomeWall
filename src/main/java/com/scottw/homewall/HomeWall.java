@@ -61,8 +61,8 @@ public class HomeWall implements HttpFunction {
   private void handleDelete(HttpRequest request, HttpResponse response) {
     String path = request.getPath();
     if (path.startsWith("/problems/")) {
-      if (path.split("/").length == 2) {
-        String uuid = path.split("/")[1].trim();
+      if (path.split("/").length == 3) {
+        String uuid = path.split("/")[2].trim();
         problemsDao.deleteProblem(UUID.fromString(uuid));
         response.setStatusCode(204);
         return;
