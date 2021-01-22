@@ -114,4 +114,17 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>travis</id>
+      <activation>
+        <property>
+          <name>env.TRAVIS</name>
+        </property>
+      </activation>
+      <properties>
+        <plugin.prettier.goal>check</plugin.prettier.goal>
+      </properties>
+    </profile>
+  </profiles>
 </project>
