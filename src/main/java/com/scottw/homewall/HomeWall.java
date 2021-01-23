@@ -1,32 +1,28 @@
 package com.scottw.homewall;
 
-import static com.scottw.homewall.dao.TypeRefs.HOLDS;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.cloud.datastore.*;
 import com.google.cloud.functions.HttpFunction;
 import com.google.cloud.functions.HttpRequest;
 import com.google.cloud.functions.HttpResponse;
 import com.scottw.homewall.core.problem.Problem;
 import com.scottw.homewall.core.problem.ProblemRequest;
-import com.scottw.homewall.dao.HoldsDao;
+import com.scottw.homewall.core.wall.Wall;
+import com.scottw.homewall.core.wall.WallRequest;
 import com.scottw.homewall.dao.ProblemsDao;
+import com.scottw.homewall.dao.WallsDao;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.time.Instant;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.UUID;
 
 public class HomeWall implements HttpFunction {
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final ProblemsDao problemsDao;
-  private final HoldsDao holdsDao;
+  private final WallsDao wallsDao;
 
   public HomeWall() {
     this.problemsDao = new ProblemsDao();
-    this.holdsDao = new HoldsDao();
+    this.wallsDao = new WallsDao();
   }
 
   @Override
@@ -44,7 +40,6 @@ public class HomeWall implements HttpFunction {
         handleGet(request, response);
         break;
       case "PUT":
-        handlePut(request, response);
         break;
       case "POST":
         handlePost(request, response);
@@ -88,22 +83,16 @@ public class HomeWall implements HttpFunction {
             )
           );
         break;
-      default:
-        response.setStatusCode(404);
-        break;
-    }
-  }
-
-  private void handlePut(HttpRequest request, HttpResponse response)
-    throws IOException {
-    switch (request.getPath()) {
-      case "/holds":
+      case "/walls":
         response
           .getWriter()
           .write(
             objectMapper.writeValueAsString(
-              upsertHolds(
-                objectMapper.readValue(request.getInputStream(), HOLDS)
+              createWall(
+                objectMapper.readValue(
+                  request.getInputStream(),
+                  WallRequest.class
+                )
               )
             )
           );
@@ -114,32 +103,13 @@ public class HomeWall implements HttpFunction {
     }
   }
 
-  private Problem createProblem(ProblemRequest problemRequest) {
-    Problem problem = Problem
-      .builder()
-      .from(problemRequest)
-      .setCreatedAt(Instant.now().toEpochMilli())
-      .setUuid(UUID.randomUUID())
-      .build();
-
-    problemsDao.createProblem(
-      Problem
-        .builder()
-        .from(problemRequest)
-        .setCreatedAt(Instant.now().toEpochMilli())
-        .setUuid(UUID.randomUUID())
-        .build()
-    );
-
-    return problem;
+  private Wall createWall(WallRequest wallRequest) {
+    return wallsDao.createWall(wallRequest);
   }
-
-  private List<List<Map<String, Integer>>> upsertHolds(
-    List<List<Map<String, Integer>>> holds
-  ) {
-    holdsDao.upsertHolds(holds);
-
-    return holds;
+  private Problem createProblem(ProblemRequest problemRequest) {
+   return problemsDao.createProblem(
+      problemRequest
+    );
   }
 
   private void handleGet(HttpRequest request, HttpResponse response)
@@ -150,16 +120,16 @@ public class HomeWall implements HttpFunction {
           .getWriter()
           .write(objectMapper.writeValueAsString(getProblems()));
         break;
-      case "/holds":
-        response.getWriter().write(objectMapper.writeValueAsString(getHolds()));
+      case "/walls":
+        response.getWriter().write(objectMapper.writeValueAsString(getWalls()));
         break;
       default:
         response.setStatusCode(404);
     }
   }
 
-  private List<List<Map<String, Integer>>> getHolds() throws IOException {
-    return holdsDao.getHolds();
+  private List<Wall> getWalls() {
+    return wallsDao.getWalls();
   }
 
   private List<Problem> getProblems() throws IOException {
