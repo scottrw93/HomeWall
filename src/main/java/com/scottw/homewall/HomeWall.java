@@ -106,10 +106,9 @@ public class HomeWall implements HttpFunction {
   private Wall createWall(WallRequest wallRequest) {
     return wallsDao.createWall(wallRequest);
   }
+
   private Problem createProblem(ProblemRequest problemRequest) {
-   return problemsDao.createProblem(
-      problemRequest
-    );
+    return problemsDao.createProblem(problemRequest);
   }
 
   private void handleGet(HttpRequest request, HttpResponse response)

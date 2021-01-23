@@ -24,11 +24,11 @@ public class ProblemsDao {
 
   public Problem createProblem(ProblemRequest problemRequest) {
     Problem problem = Problem
-            .builder()
-            .from(problemRequest)
-            .setCreatedAt(Instant.now().toEpochMilli())
-            .setUuid(UUID.randomUUID())
-            .build();
+      .builder()
+      .from(problemRequest)
+      .setCreatedAt(Instant.now().toEpochMilli())
+      .setUuid(UUID.randomUUID())
+      .build();
 
     Key taskKey = datastore
       .newKeyFactory()
