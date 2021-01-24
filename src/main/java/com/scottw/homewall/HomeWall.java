@@ -10,12 +10,23 @@ import com.scottw.homewall.core.wall.Wall;
 import com.scottw.homewall.core.wall.WallRequest;
 import com.scottw.homewall.dao.ProblemsDao;
 import com.scottw.homewall.dao.WallsDao;
+import com.scottw.homewall.io.UploadWallImage;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import javax.imageio.ImageIO;
 
 public class HomeWall implements HttpFunction {
+
+  static {
+    System.setProperty("GOOGLE_CLOUD_PROJECT", "homewall-301021");
+  }
+
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final ProblemsDao problemsDao;
   private final WallsDao wallsDao;
@@ -69,6 +80,23 @@ public class HomeWall implements HttpFunction {
   private void handlePost(HttpRequest request, HttpResponse response)
     throws IOException {
     switch (request.getPath()) {
+      case "/images":
+        try (InputStream is = request.getInputStream()) {
+          response
+            .getWriter()
+            .write(
+              objectMapper.writeValueAsString(
+                Map.of(
+                  "src",
+                  UploadWallImage.uploadImage(
+                    is,
+                    request.getContentType().orElseThrow()
+                  )
+                )
+              )
+            );
+        }
+        break;
       case "/problems":
         response
           .getWriter()
