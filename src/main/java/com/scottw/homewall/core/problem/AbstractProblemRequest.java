@@ -1,5 +1,7 @@
 package com.scottw.homewall.core.problem;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.scottw.homewall.core.OurStyle;
 import com.scottw.homewall.core.wall.Hold;
 import java.util.List;
@@ -9,6 +11,7 @@ import org.immutables.value.Value;
 
 @OurStyle
 @Value.Immutable
+@JsonDeserialize(as = ProblemRequest.class)
 public abstract class AbstractProblemRequest {
 
   public abstract String getName();
