@@ -24,6 +24,6 @@ before_deploy:
 deploy:
   provider: script
   skip_cleanup: true
-  script: gcloud app deploy --project homewall-30102
+  script: gcloud app deploy --project homewall-301021
   on:
     branch: main
