@@ -4,44 +4,43 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.datastore.*;
 import com.scottw.homewall.core.wall.Hold;
-import com.scottw.homewall.core.wall.Point;
 import com.scottw.homewall.core.wall.Wall;
-import com.scottw.homewall.core.wall.WallRequest;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+@Component
 public class WallsDao {
   private final Datastore datastore;
   private final ObjectMapper objectMapper;
 
-  public WallsDao() {
-    this.datastore = DatastoreFactory.fetch();
-    this.objectMapper = new ObjectMapper();
+  @Autowired
+  public WallsDao(Datastore datastore, ObjectMapper objectMapper) {
+    this.datastore = datastore;
+    this.objectMapper = objectMapper;
   }
 
-  public Wall createWall(WallRequest wallRequest) {
-    UUID uuid = UUID.randomUUID();
+  public Wall createWall(Wall wall) {
     Key taskKey = datastore
       .newKeyFactory()
       .setKind("Wall")
-      .newKey(uuid.toString());
+      .newKey(wall.getUuid().toString());
 
     Entity.Builder builder = Entity
       .newBuilder(taskKey)
-      .set("image", wallRequest.getImage().toString())
-      .set("name", wallRequest.getName())
+      .set("image", wall.getImage().toString())
+      .set("name", wall.getName())
       .set("createdAt", Instant.now().toEpochMilli());
 
-    for (int i = 0; i < wallRequest.getHolds().size(); i++) {
+    for (int i = 0; i < wall.getHolds().size(); i++) {
       try {
         builder.set(
           "hold" + i,
-          Blob.copyFrom(
-            objectMapper.writeValueAsBytes(wallRequest.getHolds().get(i))
-          )
+          Blob.copyFrom(objectMapper.writeValueAsBytes(wall.getHolds().get(i)))
         );
       } catch (JsonProcessingException e) {
         throw new RuntimeException(e);
@@ -50,7 +49,7 @@ public class WallsDao {
 
     datastore.put(builder.build());
 
-    return Wall.builder().from(wallRequest).setUuid(uuid).build();
+    return wall;
   }
 
   public List<Wall> getWalls() {

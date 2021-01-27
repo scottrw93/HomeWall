@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-package com.scottw.homewall;
+package com.scottw.homewall.controllers;
 
 import com.scottw.homewall.core.wall.Wall;
 import com.scottw.homewall.core.wall.WallRequest;
 import com.scottw.homewall.dao.WallsDao;
 import java.util.List;
+import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,13 +37,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class WallController {
   private final WallsDao wallsDao;
 
-  public WallController() {
-    this.wallsDao = new WallsDao();
+  @Autowired
+  public WallController(WallsDao wallsDao) {
+    this.wallsDao = wallsDao;
   }
 
   @RequestMapping(method = RequestMethod.POST)
   public Wall createWall(@RequestBody WallRequest wallRequest) {
-    return wallsDao.createWall(wallRequest);
+    return wallsDao.createWall(
+      Wall.builder().from(wallRequest).setUuid(UUID.randomUUID()).build()
+    );
   }
 
   @RequestMapping(method = RequestMethod.GET)

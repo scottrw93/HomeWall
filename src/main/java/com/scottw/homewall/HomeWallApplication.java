@@ -16,6 +16,8 @@
 
 package com.scottw.homewall;
 
+import com.google.cloud.datastore.Datastore;
+import com.google.cloud.datastore.DatastoreOptions;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -40,5 +42,10 @@ public class HomeWallApplication {
           .allowedMethods("HEAD", "GET", "PUT", "POST", "DELETE", "PATCH");
       }
     };
+  }
+
+  @Bean
+  public Datastore datastoreOptions() {
+    return DatastoreOptions.newBuilder().build().getService();
   }
 }

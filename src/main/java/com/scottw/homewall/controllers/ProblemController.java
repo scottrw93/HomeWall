@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.scottw.homewall;
+package com.scottw.homewall.controllers;
 
 import com.scottw.homewall.core.problem.Problem;
 import com.scottw.homewall.core.problem.ProblemRequest;
@@ -22,6 +22,7 @@ import com.scottw.homewall.dao.ProblemsDao;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,8 +35,9 @@ import org.springframework.web.bind.annotation.*;
 public class ProblemController {
   private final ProblemsDao problemsDao;
 
-  public ProblemController() {
-    this.problemsDao = new ProblemsDao();
+  @Autowired
+  public ProblemController(ProblemsDao problemsDao) {
+    this.problemsDao = problemsDao;
   }
 
   @RequestMapping(method = RequestMethod.GET)
@@ -45,7 +47,9 @@ public class ProblemController {
 
   @RequestMapping(method = RequestMethod.POST)
   public Problem createProblem(@RequestBody ProblemRequest problemRequest) {
-    return problemsDao.createProblem(problemRequest);
+    return problemsDao.createProblem(
+      Problem.builder().from(problemRequest).setUuid(UUID.randomUUID()).build()
+    );
   }
 
   @RequestMapping(path = "/{uuid}", method = RequestMethod.DELETE)
