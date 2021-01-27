@@ -20,6 +20,7 @@ import com.scottw.homewall.core.problem.Problem;
 import com.scottw.homewall.core.problem.ProblemRequest;
 import com.scottw.homewall.dao.ProblemsDao;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +49,12 @@ public class ProblemController {
   @RequestMapping(method = RequestMethod.POST)
   public Problem createProblem(@RequestBody ProblemRequest problemRequest) {
     return problemsDao.createProblem(
-      Problem.builder().from(problemRequest).setUuid(UUID.randomUUID()).build()
+      Problem
+        .builder()
+        .from(problemRequest)
+        .setUuid(UUID.randomUUID())
+        .setCreatedAt(Instant.now().toEpochMilli())
+        .build()
     );
   }
 
