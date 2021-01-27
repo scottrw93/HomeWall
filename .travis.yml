@@ -14,16 +14,13 @@ before_deploy:
       -in deploy/homewall-301021-5c8b8fc4efd0.json.enc \
       -out deploy/homewall-301021-5c8b8fc4efd0.json \
       -d
-  - sudo apt-get update
-  - echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-  - sudo apt-get install -y apt-transport-https ca-certificates gnupg
-  - curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
-  - sudo apt-get update && sudo apt-get install -y google-cloud-sdk
-  - gcloud auth activate-service-account --key-file deploy/homewall-301021-5c8b8fc4efd0.json
 
 deploy:
-  provider: script
+  provider: gae
+  config: src/main/appengine/app.yaml
   skip_cleanup: true
-  script: gcloud app deploy --project homewall-301021
+  keyfile: deploy/homewall-301021-5c8b8fc4efd0.json
+  project: homewall-301021
+  default: true
   on:
     branch: main
