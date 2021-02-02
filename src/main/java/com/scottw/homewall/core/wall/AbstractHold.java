@@ -8,5 +8,10 @@ import org.immutables.value.Value;
 @Value.Immutable
 public abstract class AbstractHold {
 
+  @Value.Default
+  public boolean isTagged() {
+    return false;
+  }
+
   public abstract List<Point> getPoints();
 }
