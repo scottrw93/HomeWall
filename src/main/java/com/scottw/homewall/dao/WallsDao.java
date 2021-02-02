@@ -4,13 +4,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.datastore.*;
 import com.scottw.homewall.core.wall.Hold;
-import com.scottw.homewall.core.wall.Point;
 import com.scottw.homewall.core.wall.Wall;
 import com.scottw.homewall.core.wall.WallRequest;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class WallsDao {
@@ -60,6 +62,7 @@ public class WallsDao {
         .setLimit(100)
         .setOffset(0)
         .setKind("Wall")
+        .addOrderBy(StructuredQuery.OrderBy.desc("name"))
         .build()
     );
 
