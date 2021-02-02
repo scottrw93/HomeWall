@@ -1,32 +1,35 @@
 package com.scottw.homewall.dao;
 
+import static com.scottw.homewall.dao.TypeRefs.HOLDS;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.datastore.*;
 import com.scottw.homewall.core.problem.Problem;
-import com.scottw.homewall.core.wall.Hold;
+import com.scottw.homewall.core.problem.ProblemRequest;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
-@Component
 public class ProblemsDao {
-  private static final TypeReference<List<Hold>> HOLDS = new TypeReference<>() {};
-
   private final Datastore datastore;
   private final ObjectMapper objectMapper;
 
-  @Autowired
-  public ProblemsDao(Datastore datastore, ObjectMapper objectMapper) {
-    this.datastore = datastore;
-    this.objectMapper = objectMapper;
+  public ProblemsDao() {
+    this.datastore = DatastoreFactory.fetch();
+    this.objectMapper = new ObjectMapper();
   }
 
-  public Problem createProblem(Problem problem) {
+  public Problem createProblem(ProblemRequest problemRequest) {
+    Problem problem = Problem
+      .builder()
+      .from(problemRequest)
+      .setCreatedAt(Instant.now().toEpochMilli())
+      .setUuid(UUID.randomUUID())
+      .build();
+
     Key taskKey = datastore
       .newKeyFactory()
       .setKind("Problem")

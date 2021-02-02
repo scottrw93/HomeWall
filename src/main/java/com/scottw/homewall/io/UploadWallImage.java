@@ -3,6 +3,9 @@ package com.scottw.homewall.io;
 import com.google.cloud.storage.*;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.List;
 import java.util.UUID;
 
 public class UploadWallImage {
